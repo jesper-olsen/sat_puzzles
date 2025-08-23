@@ -2,24 +2,24 @@
 
 A Rust tool that explores the classic N-Queens problem by encoding it as a Boolean Satisfiability (SAT) problem.
 
-This project demonstrates a declarative approach to problem-solving: instead of telling the computer how to find a solution step-by-step, we simply define the rules of the problem and let a generic, highly-optimized SAT solver find the answer. The CNF formulas are generated and solved using the [Varisat](https://github.com/jix/varisat) library.
+This project uses a declarative approach to problem-solving: define the rules of the problem and let a generic, highly-optimized SAT solver find the answer. The CNF formulas are generated and solved using the [Varisat](https://github.com/jix/varisat) library.
 
 
 ---
 
 ## Features
-* CNF Generation: Creates a standard DIMACS .cnf file representing the N-Queens problem, compatible with any SAT solver.
+* CNF Generation: Creates a standard DIMACS .cnf file representing the N-Queens problem, compatible with most SAT solvers.
 * Direct Solving: Solves the N-Queens problem in-memory without creating an intermediate file.
 * Solution Enumeration: Finds and counts all unique solutions for a given N.
 * Visualization: Renders found solutions as easy-to-read chessboard layouts.
 
 ## Getting Started
 
-# Prerequisites
+## Prerequisites
 
 You need to have the Rust toolchain installed. If you don't, get it at [rustup.rs.](https://rustup.rs/)
 
-# Installation
+## Installation
 
 Clone the repository and build in release mode:
 
@@ -36,7 +36,7 @@ The executable will be located at target/release/nqueens_sat.
 
 The tool has two main subcommands: **generate** and **solve**.
 
-# 1. Generate CNF
+## 1. Generate CNF
 
 This command creates a .cnf file that describes the constraints for an N-Queens problem. This file can be used with external SAT solvers.
 
@@ -79,7 +79,7 @@ s SATISFIABLE
 v -1 -2 -3 -4 5 -6 -7 -8 -9 10 -11 -12 -13 -14 -15 -16 -17 -18 -19 20 -21 -22 -23 -24 -25 -26 -27 -28 -29 -30 31 -32 -33 -34 35 -36 -37 -38 -39 -40 -41 -42 -43 -44 -45 -46 -47 48 -49 -50 -51 -52 -53 54 -55 -56 57 -58 -59 -60 -61 -62 -63 -64 0
 ```
 
-# 2. Solve and Visualize Directly
+## 2. Solve and Visualize Directly
 
 This command solves the problem in-memory and prints the solutions to the console.
 
