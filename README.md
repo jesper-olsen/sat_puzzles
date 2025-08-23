@@ -85,7 +85,7 @@ This command solves the problem in-memory and prints the solutions to the consol
 
 Find a single solution:
 ``` bash
-cargo run --release -- solve 8 --all
+cargo run --release -- solve 8
 ```
 ``` text
 Solving for 8-Queens...
