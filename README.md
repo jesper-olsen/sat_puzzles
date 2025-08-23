@@ -2,13 +2,13 @@
 
 A Rust tool that explores the classic N-Queens problem by encoding it as a Boolean Satisfiability (SAT) problem.
 
-This project uses a declarative approach to problem-solving: define the rules of the problem and let a generic, highly-optimized SAT solver find the answer. The CNF formulas are generated and solved using the [Varisat](https://github.com/jix/varisat) library.
+Declarative approach: CNF formulas that describe the N-Queens puzzle are generated and a generic SAT solver leveraged to find solutions. The formulas can be exported as standard DIMACS `.cnf` files (usable with most solvers), or solved directly in-memory using the [Varisat](https://github.com/jix/varisat) library.
 
 
 ---
 
 ## Features
-* CNF Generation: Creates a standard DIMACS .cnf file representing the N-Queens problem, compatible with most SAT solvers.
+* CNF Generation: Creates a standard DIMACS .cnf file representing the N-Queens problem, compatible with Varisat and  most other SAT solvers.
 * Direct Solving: Solves the N-Queens problem in-memory without creating an intermediate file.
 * Solution Enumeration: Finds and counts all unique solutions for a given N.
 * Visualization: Renders found solutions as easy-to-read chessboard layouts.
@@ -34,7 +34,9 @@ The executable will be located at target/release/nqueens_sat.
 
 ## Usage
 
-The tool has two main subcommands: **generate** and **solve**.
+The tool provides two main modes of operation:
+* generate - write the CNF formula to a file, for use with external SAT solvers.
+* solve - solve the problem directly in-memory using Varisat and visualize solutions.
 
 ## 1. Generate CNF
 
@@ -135,7 +137,8 @@ Q . . . . . . .
 
 ## How It Works: SAT Encoding
 
-The N-Queens problem is translated into a Boolean formula by defining variables and constraints:
+Internally, the N-Queens problem is encoded as a Boolean satisfiability formula. Each square of
+the chessboard maps to a Boolean variable, and the rules of chess are expressed as logical constraints.
 
 Variable: A boolean variable x_r,c is created for each square (r, c) on the board. x_r,c is true if a queen is on that square, and false otherwise. For an 8x8 board, this means 64 variables.
 
