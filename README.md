@@ -13,6 +13,7 @@ Clone the repository and build in release mode:
 git clone https://github.com/yourusername/N-Queens_sat.git
 cd N-Queens_sat
 cargo build --release
+```
 
 ---
 
