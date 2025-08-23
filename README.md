@@ -20,6 +20,7 @@ cargo build --release
 ## Generate CNF
 
 Generate a .cnf file that can be solved by any SAT solver:
+
 ``` bash
 cargo run -- generate 5
 ```
