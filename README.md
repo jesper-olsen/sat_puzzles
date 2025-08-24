@@ -30,6 +30,7 @@ You need to have the Rust toolchain installed. If you don't, get it at [rustup.r
 
 You need to have the Rust toolchain installed. If you don't, get it at [rustup.rs.](https://rustup.rs/)
 
+
 ## Installation
 
 Clone the repository and build in release mode:
@@ -44,20 +45,20 @@ The executable will be located at target/release/nqueens_sat.
 ---
 
 ## Usage
+The tool is structured with subcommands for each puzzle. The general format is:
+cargo run --release -- <PUZZLE> <COMMAND> [ARGS]
 
-The tool provides two main modes of operation:
-* generate - write the CNF formula to a file, for use with external SAT solvers.
-* solve - solve the problem directly in-memory using Varisat and visualize solutions.
+### N-Queens
 
-## 1. Generate CNF
+### 1. Generate CNF
 
 This command creates a .cnf file that describes the constraints for an N-Queens problem. This file can be used with external SAT solvers.
 
 ``` bash
-cargo run --release -- generate 8
+cargo run --release --bin satpuzzles -- nqueens generate 8
 ```
 
-Output
+Output:
 ``` text
 Generating CNF for 8-Queens problem...
 Successfully wrote problem to '8-queens.cnf' (64 variables, 736 clauses)
@@ -92,13 +93,13 @@ s SATISFIABLE
 v -1 -2 -3 -4 5 -6 -7 -8 -9 10 -11 -12 -13 -14 -15 -16 -17 -18 -19 20 -21 -22 -23 -24 -25 -26 -27 -28 -29 -30 31 -32 -33 -34 35 -36 -37 -38 -39 -40 -41 -42 -43 -44 -45 -46 -47 48 -49 -50 -51 -52 -53 54 -55 -56 57 -58 -59 -60 -61 -62 -63 -64 0
 ```
 
-## 2. Solve and Visualize Directly
+### 2. Solve and Visualize Directly
 
 This command solves the problem in-memory and prints the solutions to the console.
 
 Find a single solution:
 ``` bash
-cargo run --release -- solve 8
+cargo run --release --bin satpuzzles -- nqueens solve 8
 ```
 ``` text
 Solving for 8-Queens...
@@ -117,7 +118,7 @@ Q . . . . . . .
 
 Find and count *all* solutions:
 ``` bash
-cargo run --release -- solve 8 --all
+cargo run --release --bin satpuzzles -- nqueens solve 8 --all
 ```
 ``` text
 Solving for 8-Queens...
@@ -144,6 +145,51 @@ Q . . . . . . .
 . . . . Q . . .
 
 ...
+```
+
+### Sudoku
+
+Choose one of three presets - easy, harder, hardest - and like for N-Queens solve or generate .cnf:
+
+Solve
+``` bash
+cargo run --release --bin satpuzzles -- sudoku solve easy
+```
+
+Output:
+``` text
+Attempting to solve puzzle...
+┌───────┬───────┬───────┐
+│ · · 3 │ · 2 · │ 6 · · │
+│ 9 · · │ 3 · 5 │ · · 1 │
+│ · · 1 │ 8 · 6 │ 4 · · │
+├───────┼───────┼───────┤
+│ · · 8 │ 1 · 2 │ 9 · · │
+│ 7 · · │ · · · │ · · 8 │
+│ · · 6 │ 7 · 8 │ 2 · · │
+├───────┼───────┼───────┤
+│ · · 2 │ 6 · 9 │ 5 · · │
+│ 8 · · │ 2 · 3 │ · · 9 │
+│ · · 5 │ · 1 · │ 3 · · │
+└───────┴───────┴───────┘
+
+Solution found:
+┌───────┬───────┬───────┐
+│ 4 8 3 │ 9 2 1 │ 6 5 7 │
+│ 9 6 7 │ 3 4 5 │ 8 2 1 │
+│ 2 5 1 │ 8 7 6 │ 4 9 3 │
+├───────┼───────┼───────┤
+│ 5 4 8 │ 1 3 2 │ 9 7 6 │
+│ 7 2 9 │ 5 6 4 │ 1 3 8 │
+│ 1 3 6 │ 7 9 8 │ 2 4 5 │
+├───────┼───────┼───────┤
+│ 3 7 2 │ 6 8 9 │ 5 1 4 │
+│ 8 1 4 │ 2 5 3 │ 7 6 9 │
+│ 6 9 5 │ 4 1 7 │ 3 8 2 │
+└───────┴───────┴───────┘
+
+Checking how many solutions this puzzle has...
+Found 1 solution(s).
 ```
 
 ## How It Works: SAT Encoding
