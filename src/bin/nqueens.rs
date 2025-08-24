@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use nqueens_sat::{Solution, find_all_solutions, generate_clauses};
+use sat_puzzles::n_queens::{find_all_solutions, generate_clauses};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -30,22 +30,6 @@ enum Commands {
         #[arg(short, long)]
         all: bool,
     },
-}
-
-/// Prints a single N-Queens solution to the console as a board.
-fn print_solution(solution: &Solution, n: usize, solution_num: usize) {
-    println!("\n--- Solution {solution_num} ---");
-    let mut board = vec![vec!['.'; n]; n];
-    for &(r, c) in solution {
-        board[r][c] = 'Q';
-    }
-
-    for row in board {
-        for cell in row {
-            print!("{cell} ");
-        }
-        println!();
-    }
 }
 
 fn main() -> Result<()> {
@@ -88,11 +72,12 @@ fn main() -> Result<()> {
             } else if *all {
                 println!("Found {} unique solutions for N={}", solutions.len(), n);
                 for (i, sol) in solutions.iter().enumerate() {
-                    print_solution(sol, *n, i + 1);
+                    println!("\n--- Solution {solution_num} ---", solution_num = i + 1);
+                    println!("{sol}");
                 }
             } else {
                 println!("Found a solution for N={n}");
-                print_solution(&solutions[0], *n, 1);
+                println!("{}", solutions[0]);
             }
         }
     }

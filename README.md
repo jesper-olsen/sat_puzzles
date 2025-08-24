@@ -1,17 +1,28 @@
-# N-Queens SAT Solver
+# SAT Puzzle Solvers in Rust
+A collection of tools that explores classic logic puzzles by encoding them as Boolean Satisfiability (SAT) problems.
 
-A Rust tool that explores the classic N-Queens problem by encoding it as a Boolean Satisfiability (SAT) problem.
+This project takes a declarative approach: the rules of each puzzle are described as a set of logical constraints, which are then compiled into a Conjunctive Normal Form (CNF) formula. A generic SAT solver is then leveraged to find valid solutions.
 
-Declarative approach: CNF formulas that describe the N-Queens puzzle are generated and a generic SAT solver leveraged to find solutions. The formulas can be exported as standard DIMACS `.cnf` files (usable with most solvers), or solved directly in-memory using the [Varisat](https://github.com/jix/varisat) library.
+The core solver logic uses the [Varisat](https://github.com/jix/varisat) library.
 
-
----
+## Supported Puzzles
+N-Queens: Place N queens on an N×N chessboard so that no two queens threaten each other.
+Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
+Minesweeper: (Coming Soon) Deduce the location of hidden mines in a grid based on numeric clues.
 
 ## Features
-* CNF Generation: Creates a standard DIMACS .cnf file representing the N-Queens problem, compatible with Varisat and  most other SAT solvers.
-* Direct Solving: Solves the N-Queens problem in-memory without creating an intermediate file.
-* Solution Enumeration: Finds and counts all unique solutions for a given N.
-* Visualization: Renders found solutions as easy-to-read chessboard layouts.
+CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
+Direct Solving: Solves puzzles directly in-memory without creating an intermediate file.
+Solution Enumeration: Finds and counts all unique solutions for a given puzzle configuration.
+Visualization: Renders found solutions in an easy-to-read, puzzle-specific format.
+
+## Getting Started
+
+### Prerequisites
+
+You need to have the Rust toolchain installed. If you don't, get it at [rustup.rs.](https://rustup.rs/)
+
+---
 
 ## Getting Started
 
@@ -136,11 +147,11 @@ Q . . . . . . .
 ```
 
 ## How It Works: SAT Encoding
+Internally, each puzzle is encoded as a Boolean satisfiability formula. The puzzle's state is mapped to a set of Boolean variables, and its rules are expressed as logical constraints (clauses).
 
-Internally, the N-Queens problem is encoded as a Boolean satisfiability formula. Each square of
-the chessboard maps to a Boolean variable, and the rules of chess are expressed as logical constraints.
+Example: N-Queens Encoding
 
-Variable: A boolean variable x_r,c is created for each square (r, c) on the board. x_r,c is true if a queen is on that square, and false otherwise. For an 8x8 board, this means 64 variables.
+Variables: A boolean variable x_r,c is created for each square (r, c) on the board. x_r,c is true if a queen is on that square, and false otherwise. For an 8x8 board, this means 64 variables.
 
 Constraints: The rules of chess are encoded as logical clauses:
 
