@@ -29,9 +29,9 @@ enum PuzzleType {
     },
     /// Solve map coloring problems
     #[command(name = "mapcolor")]
-    MapColor {
+    MapColour {
         #[command(subcommand)]
-        command: MapColorCommand,
+        command: MapColourCommand,
     },
 }
 
@@ -71,21 +71,24 @@ enum SudokuCommand {
 }
 
 #[derive(Subcommand)]
-enum MapColorCommand {
+enum MapColourCommand {
     /// List available maps
     List,
     /// Generate CNF for a map
     Generate {
         /// Map name
         map: String,
+        /// Number of colours
+        #[arg(short, long, default_value = "4")]
+        colours: usize,
     },
     /// Solve map coloring
     Solve {
         /// Map name
         map: String,
-        /// Number of colors
+        /// Number of colours
         #[arg(short, long, default_value = "4")]
-        colors: usize,
+        colours: usize,
     },
 }
 
@@ -165,8 +168,8 @@ fn handle_sudoku(command: SudokuCommand) -> Result<()> {
             };
             println!("Generating CNF for {puzzle} Sudoku problem...");
             let clauses = sudoku::generate_clauses(&grid);
-            let output = format!("sudoku.cnf");
-            let file = File::create(&output)?;
+            let output = "sudoku.cnf";
+            let file = File::create(output)?;
             let mut writer = BufWriter::new(file);
             let num_vars = num_vars(&clauses);
 
@@ -216,12 +219,25 @@ fn handle_sudoku(command: SudokuCommand) -> Result<()> {
     Ok(())
 }
 
+fn handle_map_colour(command: MapColourCommand) -> Result<()> {
+    match command {
+        MapColourCommand::List => println!("australia, usa"),
+        MapColourCommand::Generate { map, colours } => {
+            println!("Generate CNF for {map} with {colours} colours");
+        }
+        MapColourCommand::Solve { map, colours } => {
+            println!("Solving {map} with {colours} colours");
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.puzzle {
         PuzzleType::NQueens { command } => handle_nqueens(command),
         PuzzleType::Sudoku { command } => handle_sudoku(command),
-        PuzzleType::MapColor { command: _ } => unimplemented!(), //handle_map_color(command),
+        PuzzleType::MapColour { command } => handle_map_colour(command),
     }
 }
