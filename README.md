@@ -6,9 +6,10 @@ This project takes a declarative approach: the rules of each puzzle are describe
 The core solver logic uses the [Varisat](https://github.com/jix/varisat) library.
 
 ## Supported Puzzles
-N-Queens: Place N queens on an N×N chessboard so that no two queens threaten each other.
-Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
-Minesweeper: (Coming Soon) Deduce the location of hidden mines in a grid based on numeric clues.
+
+* N-Queens: Place N queens on an N×N chessboard so that no two queens threaten each other.
+
+* Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
 
 ## Features
 CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
