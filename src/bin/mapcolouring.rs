@@ -1,6 +1,39 @@
 use anyhow::Result;
+use clap::{Parser, Subcommand, ValueEnum};
 use sat_puzzles::mapcolouring::{Colouring, decode_solution, generate_clauses};
 use std::collections::HashMap;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(ValueEnum, Copy, Clone, Debug)]
+enum Map {
+    Australia,
+    //USA,
+    //France,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Generate a DIMACS CNF file for the map colouring problem
+    Generate {
+        /// The puzzle to solve
+        map: Map,
+    },
+    /// Solve the N-Queens problem and visualize the solution(s)
+    Solve {
+        /// The puzzle to solve
+        map: Map,
+        /// Find all possible solutions instead of just one
+        #[arg(short, long)]
+        all: bool,
+    },
+}
 
 // usa_csp = MapColouringCSP(list('RGBY'),
 //                          """WA: OR ID; OR: ID NV CA; CA: NV AZ; NV: ID UT AZ; ID: MT WY UT;
@@ -23,8 +56,8 @@ use std::collections::HashMap;
 
 fn main() -> Result<()> {
     let colours = ["R", "G", "B"];
-    let states = ["WA", "NT", "SA", "Q", "NSW", "V", "T"];
-    let adjacencies: HashMap<&str, Vec<&str>> = [
+    let states_australia = ["WA", "NT", "SA", "Q", "NSW", "V", "T"];
+    let adjacencies_australia: HashMap<&str, Vec<&str>> = [
         ("SA", vec!["WA", "NT", "Q", "NSW", "V"]),
         ("NT", vec!["WA", "Q", "SA"]),
         ("NSW", vec!["Q", "SA", "V"]),
@@ -37,25 +70,55 @@ fn main() -> Result<()> {
     .cloned()
     .collect();
 
-    let clauses = generate_clauses(&states, &colours, &adjacencies);
-    let raw_solutions_iterator = sat_puzzles::find_all_solutions(&clauses)?;
-    let all = true;
-    let solutions: Vec<Colouring> = if all {
-        raw_solutions_iterator
-            .map(|model| decode_solution(&model, &states, &colours))
-            .collect()
-    } else {
-        raw_solutions_iterator
-            .take(1)
-            .map(|model| decode_solution(&model, &states, &colours))
-            .collect()
-    };
+    let cli = Cli::parse();
 
-    println!("Found {} unique colourings.", solutions.len());
-    // Print the first 5 solutions for brevity
-    for (i, sol) in solutions.iter().take(5).enumerate() {
-        println!("--- Solution {} ---", i + 1);
-        println!("{sol}");
+    match &cli.command {
+        Commands::Generate { map } => {
+            println!("Generating CNF for map of {map:?}...");
+            let (states, adjacencies) = match map {
+                Map::Australia => (states_australia, adjacencies_australia),
+            };
+            let clauses = generate_clauses(&states, &colours, &adjacencies);
+            let output = "map.cnf";
+            sat_puzzles::write_clauses(output, &clauses)?;
+        }
+        Commands::Solve { map, all } => {
+            let (states, adjacencies) = match map {
+                Map::Australia => (states_australia, adjacencies_australia),
+            };
+            println!("Solving map colouring for map of {map:?}");
+            let clauses = generate_clauses(&states, &colours, &adjacencies);
+
+            let raw_solutions_iterator = sat_puzzles::find_all_solutions(&clauses)?;
+
+            let solutions: Vec<Colouring> = if *all {
+                raw_solutions_iterator
+                    .map(|model| decode_solution(&model, &states, &colours))
+                    .collect()
+            } else {
+                raw_solutions_iterator
+                    .take(1)
+                    .map(|model| decode_solution(&model, &states, &colours))
+                    .collect()
+            };
+
+            if solutions.is_empty() {
+                println!("No solutions found for map of {map:?}");
+            } else if *all {
+                println!(
+                    "Found {} unique solutions for map of {map:?}",
+                    solutions.len()
+                );
+                for (i, sol) in solutions.iter().enumerate() {
+                    println!("\n--- Solution {solution_num} ---", solution_num = i + 1);
+                    println!("{sol}");
+                }
+            } else {
+                println!("Found a solution for Sudoku {map:?}");
+                println!("{}", solutions[0]);
+            }
+        }
     }
+
     Ok(())
 }
