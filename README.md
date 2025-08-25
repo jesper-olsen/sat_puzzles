@@ -17,12 +17,6 @@ Direct Solving: Solves puzzles directly in-memory without creating an intermedia
 Solution Enumeration: Finds and counts all unique solutions for a given puzzle configuration.
 Visualization: Renders found solutions in an easy-to-read, puzzle-specific format.
 
-## Getting Started
-
-### Prerequisites
-
-You need to have the Rust toolchain installed. If you don't, get it at [rustup.rs.](https://rustup.rs/)
-
 ---
 
 ## Getting Started
@@ -37,7 +31,7 @@ You need to have the Rust toolchain installed. If you don't, get it at [rustup.r
 Clone the repository and build in release mode:
 
 ``` bash
-https://github.com/jesper-olsen/sat_puzzles
+git clone https://github.com/jesper-olsen/sat_puzzles
 cd sat_puzzles
 cargo build --release
 ```
