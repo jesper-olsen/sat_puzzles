@@ -1,6 +1,5 @@
-use anyhow::Result;
 use std::fmt;
-use varisat::{ExtendFormula, Lit, Solver};
+use varisat::Lit;
 
 // The N-Queens problem asks for all possible ways to place N chess queens on an N x N chessboard
 // such that no two queens attack each other. In chess, a queen can attack any piece located on
@@ -102,45 +101,20 @@ pub fn generate_clauses(n: usize) -> Vec<Vec<isize>> {
     clauses
 }
 
-/// Finds all unique solutions for the N-Queens problem.
-pub fn find_all_solutions(n: usize) -> Result<Vec<Queens>> {
-    let mut solver = Solver::new();
-    for clause in generate_clauses(n) {
-        solver.add_clause(
-            &clause
-                .iter()
-                .map(|&lit| Lit::from_dimacs(lit))
-                .collect::<Vec<_>>(),
-        );
-    }
-
-    let mut all_solutions = Vec::new();
-    while solver.solve()? {
-        let model = solver
-            .model()
-            .expect("Solver returned true but no model found.");
-        let mut current_solution = Vec::new();
-        let mut blocking_clause = Vec::new();
-
-        for &lit in model.iter() {
-            if lit.is_positive() {
-                current_solution.push(var_to_coords(lit.var().to_dimacs() as usize, n));
-            }
-            // block the exact same solution from being found again
-            // !(l1 AND l2 ... and lN) = (!l1 OR !l2 OR ... OR !lN)
-            blocking_clause.push(!lit);
+pub fn decode_solution(model: &[Lit], n: usize) -> Queens {
+    let mut current_solution = Vec::new();
+    for &lit in model.iter() {
+        if lit.is_positive() {
+            current_solution.push(var_to_coords(lit.var().to_dimacs() as usize, n));
         }
-        current_solution.sort(); // for deterministic output
-        all_solutions.push(Queens(current_solution));
-        solver.add_clause(&blocking_clause);
     }
-
-    Ok(all_solutions)
+    current_solution.sort(); // Deterministic output
+    Queens(current_solution)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::find_all_solutions;
+    use crate::n_queens::{Queens, decode_solution, generate_clauses};
 
     #[test]
     fn test_find_all() {
@@ -155,7 +129,14 @@ mod tests {
             (8, 92),
             (9, 352),
         ] {
-            let solutions = find_all_solutions(n).unwrap();
+            let clauses = generate_clauses(n);
+            //let solutions = crate::find_all_solutions(&clauses).unwrap();
+
+            let raw_solutions_iterator = crate::find_all_solutions(&clauses).unwrap();
+            let solutions: Vec<Queens> = raw_solutions_iterator
+                .map(|model| decode_solution(&model, n))
+                .collect();
+
             assert_eq!(solutions.len(), num_solutions);
         }
     }

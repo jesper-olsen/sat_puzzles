@@ -1,8 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use sat_puzzles::n_queens::{find_all_solutions, generate_clauses};
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use sat_puzzles::nqueens::{Queens, decode_solution, generate_clauses};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -18,9 +16,6 @@ enum Commands {
     Generate {
         /// The number of queens (the size of the board, N x N)
         n: usize,
-        // // The output .cnf file path
-        // #[arg(short, long, value_name = "FILE")]
-        // output: PathBuf,
     },
     /// Solve the N-Queens problem and visualize the solution(s)
     Solve {
@@ -36,36 +31,27 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        //Commands::Generate { n, output } => {
         Commands::Generate { n } => {
             println!("Generating CNF for {n}-Queens problem...");
             let clauses = generate_clauses(*n);
-            let num_vars = n * n;
-
             let output = format!("{n}-queens.cnf");
-            let file = File::create(&output)?;
-            let mut writer = BufWriter::new(file);
-            //let stdout = std::io::stdout();
-            // lock stdout so we can borrow it safely
-            //let mut writer = BufWriter::new(stdout.lock());
-
-            writeln!(writer, "p cnf {num_vars} {}", clauses.len())?;
-            for clause in &clauses {
-                for literal in clause {
-                    write!(writer, "{literal} ")?;
-                }
-                writeln!(writer, "0")?;
-            }
-            writer.flush()?;
-
-            println!(
-                "Successfully wrote problem to '{output}' ({num_vars} variables, {} clauses)",
-                clauses.len()
-            );
+            sat_puzzles::write_clauses(&output, &clauses)?;
         }
         Commands::Solve { n, all } => {
             println!("Solving for {n}-Queens...");
-            let solutions = find_all_solutions(*n)?;
+            let clauses = generate_clauses(*n);
+
+            let raw_solutions_iterator = sat_puzzles::find_all_solutions(&clauses)?;
+            let solutions: Vec<Queens> = if *all {
+                raw_solutions_iterator
+                    .map(|model| decode_solution(&model, *n))
+                    .collect()
+            } else {
+                raw_solutions_iterator
+                    .take(1)
+                    .map(|model| decode_solution(&model, *n))
+                    .collect()
+            };
 
             if solutions.is_empty() {
                 println!("No solutions found for N={n}");

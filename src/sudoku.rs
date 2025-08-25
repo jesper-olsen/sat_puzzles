@@ -1,10 +1,44 @@
-use anyhow::Result;
 use std::fmt;
-use varisat::{ExtendFormula, Lit, Solver};
+use varisat::Lit;
 
 const N: usize = 9; // The dimension of the grid (9x9)
 pub struct SudokuGrid([[u8; N]; N]); // 0 represents an empty cell.
 const BOX_SIZE: usize = 3; // The dimension of a sub-box (3x3)
+
+pub const PUZZLE_EASY: SudokuGrid = SudokuGrid([
+    [0, 0, 3, 0, 2, 0, 6, 0, 0],
+    [9, 0, 0, 3, 0, 5, 0, 0, 1],
+    [0, 0, 1, 8, 0, 6, 4, 0, 0],
+    [0, 0, 8, 1, 0, 2, 9, 0, 0],
+    [7, 0, 0, 0, 0, 0, 0, 0, 8],
+    [0, 0, 6, 7, 0, 8, 2, 0, 0],
+    [0, 0, 2, 6, 0, 9, 5, 0, 0],
+    [8, 0, 0, 2, 0, 3, 0, 0, 9],
+    [0, 0, 5, 0, 1, 0, 3, 0, 0],
+]);
+
+pub const PUZZLE_HARDER: SudokuGrid = SudokuGrid([
+    [4, 1, 7, 3, 6, 9, 8, 0, 5],
+    [0, 3, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 7, 0, 0, 0, 0, 0],
+    [0, 2, 0, 0, 0, 0, 0, 6, 0],
+    [0, 0, 0, 0, 8, 0, 4, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0],
+    [0, 0, 0, 6, 0, 3, 0, 7, 0],
+    [5, 0, 0, 2, 0, 0, 0, 0, 0],
+    [1, 0, 4, 0, 0, 0, 0, 0, 0],
+]);
+pub const PUZZLE_HARD: SudokuGrid = SudokuGrid([
+    [8, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 3, 6, 0, 0, 0, 0, 0],
+    [0, 7, 0, 0, 9, 0, 2, 0, 0],
+    [0, 5, 0, 0, 0, 7, 0, 0, 0],
+    [0, 0, 0, 0, 4, 5, 7, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 3, 0],
+    [0, 0, 1, 0, 0, 0, 0, 6, 8],
+    [0, 0, 8, 5, 0, 0, 0, 1, 0],
+    [0, 9, 0, 0, 0, 0, 4, 0, 0],
+]);
 
 /// Helper to map a 0-indexed (row, col, digit) to a 1-indexed DIMACS variable number.
 /// A variable is true if cell (r, c) contains digit d.
@@ -115,110 +149,16 @@ pub fn generate_clauses(initial_grid: &SudokuGrid) -> Vec<Vec<isize>> {
     clauses
 }
 
-/// Finds a single unique solution for the given Sudoku grid.
-/// Returns Ok(Some(grid)) if a solution is found, Ok(None) if unsolvable.
-pub fn solve_sudoku(initial_grid: &SudokuGrid) -> Result<Option<SudokuGrid>> {
-    let mut solver = Solver::new();
-    let clauses = generate_clauses(initial_grid);
-    for clause in clauses {
-        solver.add_clause(
-            &clause
-                .iter()
-                .map(|&lit| Lit::from_dimacs(lit))
-                .collect::<Vec<_>>(),
-        );
-    }
-
-    if solver.solve()? {
-        let model = solver
-            .model()
-            .expect("Solver returned true but no model found.");
-        let mut solved_grid = SudokuGrid([[0; N]; N]);
-        for &lit in model.iter() {
-            if lit.is_positive() {
-                let (r, c, d) = var_to_coords(lit.var().to_dimacs() as usize);
-                solved_grid.0[r][c] = d as u8;
-            }
+pub fn decode_solution(model: &[Lit]) -> SudokuGrid {
+    let mut current_solution = SudokuGrid([[0; N]; N]); // 0 represents an empty cell.
+    for &lit in model.iter() {
+        if lit.is_positive() {
+            let (r, c, d) = var_to_coords(lit.var().to_dimacs() as usize);
+            current_solution.0[r][c] = d as u8;
         }
-        Ok(Some(solved_grid))
-    } else {
-        Ok(None) // The puzzle is unsatisfiable (has no solution)
     }
+    current_solution
 }
-
-/// Finds all unique solutions for the given Sudoku grid.
-/// Useful for validating that a puzzle has a single unique solution.
-pub fn find_all_solutions(initial_grid: &SudokuGrid) -> Result<Vec<SudokuGrid>> {
-    let mut solver = Solver::new();
-    let clauses = generate_clauses(initial_grid);
-    for clause in clauses {
-        solver.add_clause(
-            &clause
-                .iter()
-                .map(|&lit| Lit::from_dimacs(lit))
-                .collect::<Vec<_>>(),
-        );
-    }
-
-    let mut all_solutions = Vec::new();
-    while solver.solve()? {
-        let model = solver
-            .model()
-            .expect("Solver returned true but no model found.");
-        let mut current_solution_grid = SudokuGrid([[0; N]; N]);
-        let mut blocking_clause = Vec::new();
-
-        for &lit in model.iter() {
-            if lit.is_positive() {
-                let (r, c, d) = var_to_coords(lit.var().to_dimacs() as usize);
-                current_solution_grid.0[r][c] = d as u8;
-            }
-            // Block this specific solution from being found again.
-            // !(l1 AND l2 ... AND lN) becomes (!l1 OR !l2 OR ... OR !lN)
-            blocking_clause.push(!lit);
-        }
-
-        all_solutions.push(current_solution_grid);
-        solver.add_clause(&blocking_clause);
-    }
-
-    Ok(all_solutions)
-}
-
-pub const PUZZLE_EASY: SudokuGrid = SudokuGrid([
-    [0, 0, 3, 0, 2, 0, 6, 0, 0],
-    [9, 0, 0, 3, 0, 5, 0, 0, 1],
-    [0, 0, 1, 8, 0, 6, 4, 0, 0],
-    [0, 0, 8, 1, 0, 2, 9, 0, 0],
-    [7, 0, 0, 0, 0, 0, 0, 0, 8],
-    [0, 0, 6, 7, 0, 8, 2, 0, 0],
-    [0, 0, 2, 6, 0, 9, 5, 0, 0],
-    [8, 0, 0, 2, 0, 3, 0, 0, 9],
-    [0, 0, 5, 0, 1, 0, 3, 0, 0],
-]);
-
-pub const PUZZLE_HARDER: SudokuGrid = SudokuGrid([
-    [4, 1, 7, 3, 6, 9, 8, 0, 5],
-    [0, 3, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 7, 0, 0, 0, 0, 0],
-    [0, 2, 0, 0, 0, 0, 0, 6, 0],
-    [0, 0, 0, 0, 8, 0, 4, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-    [0, 0, 0, 6, 0, 3, 0, 7, 0],
-    [5, 0, 0, 2, 0, 0, 0, 0, 0],
-    [1, 0, 4, 0, 0, 0, 0, 0, 0],
-]);
-pub const PUZZLE_HARD: SudokuGrid = SudokuGrid([
-    [8, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 3, 6, 0, 0, 0, 0, 0],
-    [0, 7, 0, 0, 9, 0, 2, 0, 0],
-    [0, 5, 0, 0, 0, 7, 0, 0, 0],
-    [0, 0, 0, 0, 4, 5, 7, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 3, 0],
-    [0, 0, 1, 0, 0, 0, 0, 6, 8],
-    [0, 0, 8, 5, 0, 0, 0, 1, 0],
-    [0, 9, 0, 0, 0, 0, 4, 0, 0],
-]);
 
 impl fmt::Display for SudokuGrid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -1,7 +1,7 @@
 # SAT Puzzle Solvers in Rust
-A tool that explores classic logic puzzles by encoding them as Boolean Satisfiability (SAT) problems.
+A collection of tool that explore classic logic puzzles by encoding them as Boolean Satisfiability (SAT) problems.
 
-This project takes a declarative approach: the rules of each puzzle are described as a set of logical constraints, which are then compiled into a Conjunctive Normal Form (CNF) formula. A generic SAT solver is then leveraged to find valid solutions.
+This project takes a declarative approach: the rules of each puzzle are described as a set of logical constraints, which are then compiled into a Conjunctive Normal Form (CNF) formula. A generic SAT solver is leveraged to find valid solutions.
 
 The core solver logic uses the [Varisat](https://github.com/jix/varisat) library.
 
@@ -37,17 +37,15 @@ You need to have the Rust toolchain installed. If you don't, get it at [rustup.r
 Clone the repository and build in release mode:
 
 ``` bash
-git clone https://github.com/yourusername/N-Queens_sat.git
-cd N-Queens_sat
+https://github.com/jesper-olsen/sat_puzzles
+cd sat_puzzles
 cargo build --release
 ```
-The executable will be located at target/release/nqueens_sat.
+The executables will be located at ```target/release/{nqueens,sudoku}```.
 
 ---
 
 ## Usage
-The tool is structured with subcommands for each puzzle. The general format is:
-cargo run --release -- <PUZZLE> <COMMAND> [ARGS]
 
 ### N-Queens
 
@@ -56,7 +54,7 @@ cargo run --release -- <PUZZLE> <COMMAND> [ARGS]
 This command creates a .cnf file that describes the constraints for an N-Queens problem. This file can be used with external SAT solvers.
 
 ``` bash
-cargo run --release --bin satpuzzles -- nqueens generate 8
+cargo run --release --bin nqueens -- generate 8
 ```
 
 Output:
@@ -100,7 +98,7 @@ This command solves the problem in-memory and prints the solutions to the consol
 
 Find a single solution:
 ``` bash
-cargo run --release --bin satpuzzles -- nqueens solve 8
+cargo run --release --bin nqueens -- solve 8
 ```
 ``` text
 Solving for 8-Queens...
@@ -119,7 +117,7 @@ Q . . . . . . .
 
 Find and count *all* solutions:
 ``` bash
-cargo run --release --bin satpuzzles -- nqueens solve 8 --all
+cargo run --release --bin nqueens -- solve 8 --all
 ```
 ``` text
 Solving for 8-Queens...
@@ -150,11 +148,11 @@ Q . . . . . . .
 
 ### Sudoku
 
-Choose one of three presets - easy, harder, hardest - and like for N-Queens solve or generate .cnf:
+Choose one of three presets - easy1, harder1, hardest1 - and like for N-Queens solve or generate .cnf:
 
 Solve
 ``` bash
-cargo run --release --bin satpuzzles -- sudoku solve easy
+cargo run --release --bin sudoku -- solve easy1
 ```
 
 Output:
