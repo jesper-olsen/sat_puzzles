@@ -1,5 +1,5 @@
 # SAT Puzzle Solvers in Rust
-A collection of tool that explore classic logic puzzles by encoding them as Boolean Satisfiability (SAT) problems.
+A collection of tools that explore classic logic puzzles by encoding them as Boolean Satisfiability (SAT) problems.
 
 This project takes a declarative approach: the rules of each puzzle are described as a set of logical constraints, which are then compiled into a Conjunctive Normal Form (CNF) formula. A generic SAT solver is leveraged to find valid solutions.
 
