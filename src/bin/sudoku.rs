@@ -50,8 +50,8 @@ fn main() -> Result<()> {
             println!("Generating CNF for Sudoku {puzzle:?}...");
             let grid = puzzle2sudoku(*puzzle);
             let clauses = generate_clauses(&grid);
-            let output = format!("sudoku.cnf");
-            sat_puzzles::write_clauses(&output, &clauses)?;
+            let output = "sudoku.cnf";
+            sat_puzzles::write_clauses(output, &clauses)?;
         }
         Commands::Solve { puzzle, all } => {
             let grid = puzzle2sudoku(*puzzle);

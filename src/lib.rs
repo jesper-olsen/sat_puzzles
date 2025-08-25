@@ -1,3 +1,4 @@
+pub mod mapcolouring;
 pub mod nqueens;
 pub mod sudoku;
 
@@ -20,7 +21,7 @@ fn num_vars(clauses: &[Vec<isize>]) -> usize {
 pub fn write_clauses(output: &str, clauses: &[Vec<isize>]) -> Result<()> {
     let num_vars = num_vars(clauses); //n * n;
 
-    let file = File::create(&output)?;
+    let file = File::create(output)?;
     let mut writer = BufWriter::new(file);
     //let stdout = std::io::stdout();
     // lock stdout so we can borrow it safely
