@@ -14,10 +14,11 @@ The core solver logic uses the [Varisat](https://github.com/jix/varisat) library
 * Map Colourising: Assign colours to regions on a map so that neighbouring regions have different colours.
 
 ## Features
-CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
-Direct Solving: Solves puzzles directly in-memory without creating an intermediate file.
-Solution Enumeration: Finds and counts all unique solutions for a given puzzle configuration.
-Visualization: Renders found solutions in an easy-to-read, puzzle-specific format.
+
+* CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
+* Direct Solving: Solves puzzles directly in-memory without creating an intermediate file.
+* Solution Enumeration: Finds and counts all unique solutions for a given puzzle configuration.
+* Visualization: Renders found solutions in an easy-to-read, puzzle-specific format.
 
 ---
 
