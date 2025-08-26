@@ -217,26 +217,30 @@ Solving map colouring for: "Maps/france.txt"
 Found a solution for "Maps/france.txt"
 AL: G
 AQ: B
-AU: B
+AU: Y
 BO: G
-BR: G
-CA: Y
-CE: Y
-FC: B
-IF: B
-LI: R
+BR: B
+CA: B
+CE: B
+CO: R
+FC: Y
+IF: Y
+LI: G
 LO: R
-LR: Y
-MP: G
-NB: B
+LR: B
+MP: R
+NB: R
 NH: G
 NO: G
 PA: G
-PC: G
+PC: R
 PI: R
-PL: R
+PL: G
 RA: R
 ```
+
+| ![MapColouring France](MapColouring/Visualisation/Images/france.png) |
+| --- |
 
 Find and count all possible 3-colorings for Australia:
 ``` bash
