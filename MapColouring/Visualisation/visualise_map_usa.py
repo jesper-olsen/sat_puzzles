@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-# --- Your solver’s output (colors) ---
 solution = {
     "AK": "G", "AL": "Y", "AR": "Y", "AZ": "Y", "CA": "B", "CO": "Y",
     "CT": "G", "DC": "Y", "DE": "Y", "FL": "R", "GA": "G", "HI": "R",
@@ -35,7 +34,6 @@ state_name_map = {
     "WY": "Wyoming"
 }
 
-# color palette
 color_mapping = {
     "R": "#FF6B6B",   # Red
     "G": "#4ECDC4",   # Green
