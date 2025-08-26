@@ -1,6 +1,68 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
 use varisat::Lit;
+
+/// Loads map data from a file.
+///
+/// The file format should be: `STATE_CODE:NEIGHBOR1 NEIGHBOR2 ...`
+///
+/// # Returns
+/// A tuple containing:
+/// 1. A sorted Vec of all unique state names (owned Strings).
+/// 2. A HashMap mapping each state to its neighbors.
+pub fn load_map_from_file(path: &Path) -> io::Result<(Vec<String>, HashMap<String, Vec<String>>)> {
+    let file = File::open(path)?;
+    let reader = io::BufReader::new(file);
+
+    let mut adjacencies = HashMap::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        let trimmed = line.trim();
+
+        // Ignore comments and empty lines
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let parts: Vec<&str> = trimmed.split(':').collect();
+        if parts.len() != 2 {
+            // Simple error handling for malformed lines
+            eprintln!("Warning: Skipping malformed line: {}", trimmed);
+            continue;
+        }
+
+        let state = parts[0].trim().to_string();
+        let neighbors_str = parts[1].trim();
+
+        let neighbors = if neighbors_str.is_empty() {
+            vec![]
+        } else {
+            neighbors_str
+                .split_whitespace()
+                .map(|s| s.to_string())
+                .collect()
+        };
+
+        adjacencies.insert(state, neighbors);
+    }
+
+    // Now, derive the complete list of states from the loaded data
+    // This correctly includes states that might only be listed as neighbors.
+    let all_state_references: HashSet<String> = adjacencies
+        .keys()
+        .cloned()
+        .chain(adjacencies.values().flatten().cloned())
+        .collect();
+
+    let mut states: Vec<String> = all_state_references.into_iter().collect();
+    states.sort();
+
+    Ok((states, adjacencies))
+}
 
 pub struct Colouring<'a>(HashMap<&'a str, &'a str>);
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
-use sat_puzzles::mapcolouring::{Colouring, decode_solution, generate_clauses};
-use std::collections::HashMap;
+use clap::{Parser, Subcommand};
+use sat_puzzles::mapcolouring::{Colouring, decode_solution, generate_clauses, load_map_from_file};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -11,24 +11,17 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(ValueEnum, Copy, Clone, Debug)]
-enum Map {
-    Australia,
-    //USA,
-    //France,
-}
-
 #[derive(Subcommand)]
 enum Commands {
     /// Generate a DIMACS CNF file for the map colouring problem
     Generate {
-        /// The puzzle to solve
-        map: Map,
+        /// Path to the map definition file
+        map_file: PathBuf,
     },
     /// Solve the N-Queens problem and visualize the solution(s)
     Solve {
-        /// The puzzle to solve
-        map: Map,
+        /// Path to the map definition file
+        map_file: PathBuf,
         /// Find all possible solutions instead of just one
         #[arg(short, long)]
         all: bool,
@@ -56,57 +49,69 @@ enum Commands {
 
 fn main() -> Result<()> {
     let colours = ["R", "G", "B"];
-    let states_australia = ["WA", "NT", "SA", "Q", "NSW", "V", "T"];
-    let adjacencies_australia: HashMap<&str, Vec<&str>> = [
-        ("SA", vec!["WA", "NT", "Q", "NSW", "V"]),
-        ("NT", vec!["WA", "Q", "SA"]),
-        ("NSW", vec!["Q", "SA", "V"]),
-        ("WA", vec!["NT", "SA"]),
-        ("Q", vec!["NT", "SA", "NSW"]),
-        ("V", vec!["SA", "NSW"]),
-        ("T", vec![]),
-    ]
-    .iter()
-    .cloned()
-    .collect();
+    // let states_australia = ["WA", "NT", "SA", "Q", "NSW", "V", "T"];
+    // let adjacencies_australia: HashMap<&str, Vec<&str>> = [
+    //     ("SA", vec!["WA", "NT", "Q", "NSW", "V"]),
+    //     ("NT", vec!["WA", "Q", "SA"]),
+    //     ("NSW", vec!["Q", "SA", "V"]),
+    //     ("WA", vec!["NT", "SA"]),
+    //     ("Q", vec!["NT", "SA", "NSW"]),
+    //     ("V", vec!["SA", "NSW"]),
+    //     ("T", vec![]),
+    // ]
+    // .iter()
+    // .cloned()
+    // .collect();
 
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Generate { map } => {
-            println!("Generating CNF for map of {map:?}...");
-            let (states, adjacencies) = match map {
-                Map::Australia => (states_australia, adjacencies_australia),
-            };
-            let clauses = generate_clauses(&states, &colours, &adjacencies);
+        Commands::Generate { map_file } => {
+            println!("Generating CNF for map: {map_file:?}");
+            let (states, adjacencies) = load_map_from_file(map_file)?;
+
+            // Our existing functions expect slices of &str, so we create them from our owned Strings.
+            let states_ref: Vec<&str> = states.iter().map(AsRef::as_ref).collect();
+            let adjacencies_ref: std::collections::HashMap<&str, Vec<&str>> = adjacencies
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.iter().map(AsRef::as_ref).collect()))
+                .collect();
+
+            let clauses = generate_clauses(&states_ref, &colours, &adjacencies_ref);
             let output = "map.cnf";
             sat_puzzles::write_clauses(output, &clauses)?;
         }
-        Commands::Solve { map, all } => {
-            let (states, adjacencies) = match map {
-                Map::Australia => (states_australia, adjacencies_australia),
-            };
-            println!("Solving map colouring for map of {map:?}");
-            let clauses = generate_clauses(&states, &colours, &adjacencies);
+        Commands::Solve { map_file, all } => {
+            println!("Solving map colouring for: {map_file:?}");
+            let (states, adjacencies) = load_map_from_file(map_file)?;
+
+            // Our existing functions expect slices of &str, so we create them from our owned Strings.
+            let states_ref: Vec<&str> = states.iter().map(AsRef::as_ref).collect();
+            let adjacencies_ref: std::collections::HashMap<&str, Vec<&str>> = adjacencies
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.iter().map(AsRef::as_ref).collect()))
+                .collect();
+
+            let clauses = generate_clauses(&states_ref, &colours, &adjacencies_ref);
 
             let raw_solutions_iterator = sat_puzzles::find_all_solutions(&clauses)?;
 
             let solutions: Vec<Colouring> = if *all {
                 raw_solutions_iterator
-                    .map(|model| decode_solution(&model, &states, &colours))
+                    .map(|model| decode_solution(&model, &states_ref, &colours))
                     .collect()
             } else {
                 raw_solutions_iterator
                     .take(1)
-                    .map(|model| decode_solution(&model, &states, &colours))
+                    .map(|model| decode_solution(&model, &states_ref, &colours))
                     .collect()
             };
 
             if solutions.is_empty() {
-                println!("No solutions found for map of {map:?}");
+                println!("No solutions found for map of {map_file:?}");
             } else if *all {
                 println!(
-                    "Found {} unique solutions for map of {map:?}",
+                    "Found {} unique solutions for map of {map_file:?}",
                     solutions.len()
                 );
                 for (i, sol) in solutions.iter().enumerate() {
@@ -114,7 +119,7 @@ fn main() -> Result<()> {
                     println!("{sol}");
                 }
             } else {
-                println!("Found a solution for Sudoku {map:?}");
+                println!("Found a solution for Sudoku {map_file:?}");
                 println!("{}", solutions[0]);
             }
         }
