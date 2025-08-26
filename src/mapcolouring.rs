@@ -5,7 +5,7 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use varisat::Lit;
 
-/// Loads map data from a file.
+/// Loads map data from a file and creates a symmetric adjacency map.
 ///
 /// The file format should be: `STATE_CODE:NEIGHBOR1 NEIGHBOR2 ...`
 ///
@@ -17,28 +17,29 @@ pub fn load_map_from_file(path: &Path) -> io::Result<(Vec<String>, HashMap<Strin
     let file = File::open(path)?;
     let reader = io::BufReader::new(file);
 
-    let mut adjacencies = HashMap::new();
+    // Step 1: Read all states and defined adjacencies from the file
+    let mut all_states = HashSet::new();
+    let mut parsed_adjacencies = HashMap::new();
 
     for line in reader.lines() {
         let line = line?;
         let trimmed = line.trim();
 
-        // Ignore comments and empty lines
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
 
         let parts: Vec<&str> = trimmed.split(':').collect();
         if parts.len() != 2 {
-            // Simple error handling for malformed lines
-            eprintln!("Warning: Skipping malformed line: {}", trimmed);
+            eprintln!("Warning: Skipping malformed line: {trimmed}");
             continue;
         }
 
         let state = parts[0].trim().to_string();
-        let neighbors_str = parts[1].trim();
+        all_states.insert(state.clone());
 
-        let neighbors = if neighbors_str.is_empty() {
+        let neighbors_str = parts[1].trim();
+        let neighbors: Vec<String> = if neighbors_str.is_empty() {
             vec![]
         } else {
             neighbors_str
@@ -47,52 +48,56 @@ pub fn load_map_from_file(path: &Path) -> io::Result<(Vec<String>, HashMap<Strin
                 .collect()
         };
 
-        adjacencies.insert(state, neighbors);
+        for neighbor in &neighbors {
+            all_states.insert(neighbor.clone());
+        }
+
+        parsed_adjacencies.insert(state, neighbors);
     }
 
-    // Now, derive the complete list of states from the loaded data
-    // This correctly includes states that might only be listed as neighbors.
-    let all_state_references: HashSet<String> = adjacencies
-        .keys()
-        .cloned()
-        .chain(adjacencies.values().flatten().cloned())
-        .collect();
+    // Step 2: Build the final, symmetric adjacency map
+    let mut final_adjacencies = HashMap::new();
+    for state in &all_states {
+        // Use a HashSet to automatically handle duplicate neighbors
+        let mut neighbors_set = HashSet::new();
 
-    let mut states: Vec<String> = all_state_references.into_iter().collect();
-    states.sort();
+        // Add neighbors defined in the file for this state
+        if let Some(neighbors) = parsed_adjacencies.get(state) {
+            for neighbor in neighbors {
+                neighbors_set.insert(neighbor.clone());
+            }
+        }
 
-    Ok((states, adjacencies))
+        // Add this state to the neighbor list of other states
+        // (This enforces symmetry)
+        for (other_state, other_neighbors) in &parsed_adjacencies {
+            if other_neighbors.contains(state) {
+                neighbors_set.insert(other_state.clone());
+            }
+        }
+
+        let mut final_neighbors: Vec<String> = neighbors_set.into_iter().collect();
+        final_neighbors.sort(); // For deterministic output
+        final_adjacencies.insert(state.clone(), final_neighbors);
+    }
+
+    let mut sorted_states: Vec<String> = all_states.into_iter().collect();
+    sorted_states.sort();
+
+    Ok((sorted_states, final_adjacencies))
 }
 
-pub struct Colouring<'a>(HashMap<&'a str, &'a str>);
+pub struct Colouring(pub HashMap<String, String>);
 
-impl<'a> fmt::Display for Colouring<'a> {
+impl fmt::Display for Colouring {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // We need to sort the keys to get a deterministic print order
         let mut sorted_sol: Vec<_> = self.0.iter().collect();
-        sorted_sol.sort_by_key(|&(state, _)| *state);
+        sorted_sol.sort_by_key(|(state, _)| *state); // state is now &String
         for (state, colour) in sorted_sol {
             writeln!(f, "{state}: {colour}")?;
         }
         Ok(())
     }
-}
-
-/// Maps a SAT variable (as a 1-based integer) back to its corresponding
-/// (state, color) pair.
-fn var_to_state_color<'a>(
-    var_dimacs: usize,
-    states: &[&'a str],
-    colors: &[&'a str],
-) -> (&'a str, &'a str) {
-    let num_colors = colors.len();
-    // Convert from 1-based DIMACS format to 0-based index
-    let index = var_dimacs - 1;
-
-    let state_idx = index / num_colors;
-    let color_idx = index % num_colors;
-
-    (states[state_idx], colors[color_idx])
 }
 
 /// Generates CNF clauses for the Map Colouring problem.
@@ -106,17 +111,20 @@ fn var_to_state_color<'a>(
 /// A vector of clauses, where each clause is a vector of integers.
 /// A positive integer `k` represents a variable, and a negative integer `-k` its negation.
 pub fn generate_clauses(
-    states: &[&str],
-    colors: &[&str],
-    adjacencies: &HashMap<&str, Vec<&str>>,
+    states: &[String],
+    colors: &[String],
+    adjacencies: &HashMap<String, Vec<String>>,
 ) -> Vec<Vec<isize>> {
     let mut clauses = Vec::new();
     let num_states = states.len();
     let num_colors = colors.len();
 
     // Helper maps for easy lookup of indices
-    let state_to_idx: HashMap<&str, usize> =
-        states.iter().enumerate().map(|(i, &s)| (s, i)).collect();
+    let state_to_idx: HashMap<&str, usize> = states
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.as_str(), i)) // s is a &String, s.as_str() is a &str
+        .collect();
 
     // Helper function to map a (state, color) pair to a unique integer variable.
     // Variables are 1-based, which is standard for SAT solvers (DIMACS format).
@@ -143,13 +151,12 @@ pub fn generate_clauses(
 
     // --- CONSTRAINT 3: Adjacent states cannot have the same color ---
     // For each pair of adjacent states `s1, s2` and each color `c`: (-V_s1,c OR -V_s2,c).
-    for (&s1_name, neighbors) in adjacencies {
-        let s1_idx = state_to_idx[s1_name];
-        for &s2_name in neighbors {
-            // To avoid duplicate clauses (e.g., SA-WA and WA-SA), we only process
-            // an edge if the name of the first state is lexicographically smaller.
+    for (s1_name, neighbors) in adjacencies {
+        let s1_idx = state_to_idx[s1_name.as_str()];
+        for s2_name in neighbors {
             if s1_name < s2_name {
-                let s2_idx = state_to_idx[s2_name];
+                // Comparing a &String and &String works
+                let s2_idx = state_to_idx[s2_name.as_str()];
                 for c_idx in 0..num_colors {
                     clauses.push(vec![-var(s1_idx, c_idx), -var(s2_idx, c_idx)]);
                 }
@@ -160,35 +167,29 @@ pub fn generate_clauses(
     clauses
 }
 
-pub fn decode_solution<'a>(
-    model: &[Lit],
-    states: &'a [&'a str],
-    colors: &'a [&'a str],
-) -> Colouring<'a> {
-    let mut current_solution = HashMap::new();
-
-    for &lit in model.iter().filter(|l| l.is_positive()) {
-        let (state, color) = var_to_state_color(lit.var().to_dimacs() as usize, states, colors);
-        current_solution.insert(state, color);
+/// Decodes a SAT model into an owned Colouring solution.
+pub fn decode_solution(model: &[Lit], states: &[String], colors: &[String]) -> Colouring {
+    fn var_to_state_color<'a>(
+        var_dimacs: usize,
+        states: &'a [String],
+        colors: &'a [String],
+    ) -> (&'a str, &'a str) {
+        let num_colors = colors.len();
+        let index = var_dimacs - 1;
+        let state_idx = index / num_colors;
+        let color_idx = index % num_colors;
+        (states[state_idx].as_str(), colors[color_idx].as_str())
     }
 
-    Colouring(current_solution)
-}
-// usa_csp = MapColouringCSP(list('RGBY'),
-//                          """WA: OR ID; OR: ID NV CA; CA: NV AZ; NV: ID UT AZ; ID: MT WY UT;
-//                          UT: WY CO AZ; MT: ND SD WY; WY: SD NE CO; CO: NE KA OK NM; NM: OK TX AZ;
-//                          ND: MN SD; SD: MN IA NE; NE: IA MO KA; KA: MO OK; OK: MO AR TX;
-//                          TX: AR LA; MN: WI IA; IA: WI IL MO; MO: IL KY TN AR; AR: MS TN LA;
-//                          LA: MS; WI: MI IL; IL: IN KY; IN: OH KY; MS: TN AL; AL: TN GA FL;
-//                          MI: OH IN; OH: PA WV KY; KY: WV VA TN; TN: VA NC GA; GA: NC SC FL;
-//                          PA: NY NJ DE MD WV; WV: MD VA; VA: MD DC NC; NC: SC; NY: VT MA CT NJ;
-//                          NJ: DE; DE: MD; MD: DC; VT: NH MA; MA: NH RI CT; CT: RI; ME: NH;
-//                          HI: ; AK: """)
+    let solution_map = model
+        .iter()
+        .filter(|lit| lit.is_positive())
+        .map(|lit| {
+            let (state, color) = var_to_state_color(lit.var().to_dimacs() as usize, states, colors);
+            // Convert to owned Strings for the final result
+            (state.to_string(), color.to_string())
+        })
+        .collect::<HashMap<_, _>>();
 
-// france_csp = MapColouringCSP(list('RGBY'),
-//                             """AL: LO FC; AQ: MP LI PC; AU: LI CE BO RA LR MP; BO: CE IF CA FC RA
-//                             AU; BR: NB PL; CA: IF PI LO FC BO; CE: PL NB NH IF BO AU LI PC; FC: BO
-//                             CA LO AL RA; IF: NH PI CA BO CE; LI: PC CE AU MP AQ; LO: CA AL FC; LR:
-//                             MP AU RA PA; MP: AQ LI AU LR; NB: NH CE PL BR; NH: PI IF CE NB; NO:
-//                             PI; PA: LR RA; PC: PL CE LI AQ; PI: NH NO CA IF; PL: BR NB CE PC; RA:
-//                             AU BO FC PA LR""")
+    Colouring(solution_map)
+}

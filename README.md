@@ -11,6 +11,8 @@ The core solver logic uses the [Varisat](https://github.com/jix/varisat) library
 
 * Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
 
+* Map Colourising: Assign colours to regions on a map so that neighbouring regions have different colours.
+
 ## Features
 CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
 Direct Solving: Solves puzzles directly in-memory without creating an intermediate file.
@@ -185,6 +187,27 @@ Checking how many solutions this puzzle has...
 Found 1 solution(s).
 ```
 
+### Map Colourising
+
+Choose a map and like for N-Queens solve or generate .cnf:
+
+Solve
+``` bash
+cargo run --release --bin mapcolouring -- solve Maps/australia.txt --colours R G B Y
+```
+
+Output:
+``` text
+Solving map colouring for: "Maps/australia.txt"
+Found a solution for Sudoku "Maps/australia.txt"
+NSW: B
+NT: B
+Q: R
+SA: G
+T: R
+V: R
+WA: R
+```
 ## How It Works: SAT Encoding
 Internally, each puzzle is encoded as a Boolean satisfiability formula. The puzzle's state is mapped to a set of Boolean variables, and its rules are expressed as logical constraints (clauses).
 
