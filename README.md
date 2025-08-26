@@ -11,7 +11,7 @@ The core solver logic uses the [Varisat](https://github.com/jix/varisat) library
 
 * Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
 
-* Map Colourising: Assign colours to regions on a map so that neighbouring regions have different colours.
+* Map Colouring: Assign colours to regions on a map so that neighbouring regions have different colours.
 
 ## Features
 
@@ -38,7 +38,7 @@ git clone https://github.com/jesper-olsen/sat_puzzles
 cd sat_puzzles
 cargo build --release
 ```
-The executables will be located at ```target/release/{nqueens,sudoku}```.
+The executables will be located at ```target/release/{nqueens,sudoku,mapcolouring}```.
 
 ---
 
@@ -187,20 +187,68 @@ Solution found:
 Checking how many solutions this puzzle has...
 Found 1 solution(s).
 ```
+### Map Coloring
+Assign colors to regions on a map based on adjacency data from a file, ensuring no two neighboring regions share the same color. Example map files (australia.txt, france.txt, etc.) are located in the maps/ directory.
 
-### Map Colourising
+1. Generate CNF
+This command creates a .cnf file describing the constraints for coloring a map. Here, we use 3 colors for the map of Australia.
 
-Choose a map and like for N-Queens solve or generate .cnf:
-
-Solve
 ``` bash
-cargo run --release --bin mapcolouring -- solve Maps/australia.txt --colours R G B Y
+cargo run --release --bin map-colouring -- generate maps/australia.txt --colours R G B
+```
+
+Output:
+``` text
+Generating CNF for map: "maps/australia.txt"
+Successfully wrote problem to 'map.cnf' (21 variables, 55 clauses)
+```
+
+2. Solve and Visualize Directly
+This command solves the problem in-memory and prints the solutions to the console.
+
+Find a single solution for France using the default 4 colors:
+``` bash
+cargo run --release --bin map-colouring -- solve maps/france.txt
+```
+
+Output:
+``` text
+Solving map colouring for: "Maps/france.txt"
+Found a solution for "Maps/france.txt"
+AL: G
+AQ: B
+AU: B
+BO: G
+BR: G
+CA: Y
+CE: Y
+FC: B
+IF: B
+LI: R
+LO: R
+LR: Y
+MP: G
+NB: B
+NH: G
+NO: G
+PA: G
+PC: G
+PI: R
+PL: R
+RA: R
+```
+
+Find and count all possible 3-colorings for Australia:
+``` bash
+cargo run --release --bin mapcolouring -- solve maps/australia.txt --colours R G B --all
 ```
 
 Output:
 ``` text
 Solving map colouring for: "Maps/australia.txt"
-Found a solution for Sudoku "Maps/australia.txt"
+Found 18 unique solutions for map of "Maps/australia.txt"
+
+--- Solution 1 ---
 NSW: B
 NT: B
 Q: R
@@ -208,7 +256,20 @@ SA: G
 T: R
 V: R
 WA: R
+
+
+--- Solution 2 ---
+NSW: B
+NT: B
+Q: R
+SA: G
+T: B
+V: R
+WA: R
+
+...
 ```
+
 ## How It Works: SAT Encoding
 Internally, each puzzle is encoded as a Boolean satisfiability formula. The puzzle's state is mapped to a set of Boolean variables, and its rules are expressed as logical constraints (clauses).
 

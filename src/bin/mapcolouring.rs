@@ -28,7 +28,7 @@ enum Commands {
         map_file: PathBuf,
 
         /// A list of colours to use (e.g., R G B Y)
-        #[arg(short, long, value_delimiter = ' ', num_args = 1..)]
+        #[arg(short, long, value_delimiter = ' ', num_args = 1.., default_values = ["R","G","B","Y"])]
         colours: Vec<String>,
 
         /// Find all possible solutions instead of just one
@@ -81,7 +81,7 @@ fn main() -> Result<()> {
                     println!("{sol}");
                 }
             } else {
-                println!("Found a solution for Sudoku {map_file:?}");
+                println!("Found a solution for {map_file:?}");
                 println!("{}", solutions[0]);
             }
         }
