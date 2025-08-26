@@ -1,0 +1,10 @@
+# A map of Australia's states and territories.
+# Comments start with a hash. Blank lines are ignored.
+
+WA:NT SA
+NT:WA Q SA
+SA:WA NT Q NSW V
+Q:NT SA NSW
+NSW:SA Q V
+V:SA NSW
+T:
