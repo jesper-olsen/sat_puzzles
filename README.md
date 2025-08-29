@@ -17,7 +17,7 @@ The core solver logic uses the [Varisat](https://github.com/jix/varisat) library
 
 ## Features
 
-* CNF Generation: Creates standard DIMACS .cnf files for various puzzles, compatible with most external SAT solvers.
+* CNF Generation: Creates standard DIMACS [.cnf files](https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html) for various puzzles, compatible with most external SAT solvers.
 * Direct Solving: Solves puzzles directly in-memory without creating an intermediate file.
 * Solution Enumeration: Finds and counts all unique solutions for a given puzzle configuration.
 * Visualization: Renders found solutions in an easy-to-read, puzzle-specific format.
@@ -293,7 +293,7 @@ First you will need a file that specifies a minesweeper setup, such as this text
 ```
 
 Then you have to decide which cell to reveal first, such as 0, 0 - the top left corner.
-When you run the solver, you can optionally specify a (.cnf file)[https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html] to save the problem to:
+When you run the solver, you can optionally specify a .cnf file to save the problem to:
 
 ``` bash
 cargo run --release --bin minesweeper -- --map-file Minesweeper/grid9x9.txt --cnf-file minesweeper.cnf --reveal 0 0
