@@ -1,27 +1,32 @@
-pub mod mapcolouring;
-pub mod nqueens;
-pub mod sudoku;
+/// A library for solving logic puzzles using SAT techniques.
+///
+/// This crate provides tools to encode puzzles into Conjunctive Normal Form (CNF)
+/// and find solutions using a SAT solver.
+pub mod mapcolouring_sat;
+pub mod minesweeper_sat;
+pub mod nqueens_sat;
+pub mod sudoku_sat;
 
 use anyhow::Result;
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::path::Path;
 use varisat::{ExtendFormula, Lit, Solver};
 
+// number of variables - which is largest index
 fn num_vars(clauses: &[Vec<isize>]) -> usize {
-    let mut set = HashSet::new();
-    for clause in clauses {
-        for &lit in clause {
-            set.insert(lit.abs());
-        }
-    }
-    set.len()
+    clauses
+        .iter()
+        .flat_map(|clause| clause.iter())
+        .map(|&lit| lit.unsigned_abs())
+        .max()
+        .unwrap_or(0) // Handle case with no clauses
 }
 
-pub fn write_clauses(output: &str, clauses: &[Vec<isize>]) -> Result<()> {
+pub fn write_clauses<P: AsRef<Path>>(output: P, clauses: &[Vec<isize>]) -> Result<()> {
     let num_vars = num_vars(clauses); //n * n;
 
-    let file = File::create(output)?;
+    let file = File::create(&output)?;
     let mut writer = BufWriter::new(file);
     //let stdout = std::io::stdout();
     // lock stdout so we can borrow it safely
@@ -37,39 +42,12 @@ pub fn write_clauses(output: &str, clauses: &[Vec<isize>]) -> Result<()> {
     writer.flush()?;
 
     println!(
-        "Successfully wrote problem to '{output}' ({num_vars} variables, {} clauses)",
+        "Successfully wrote problem to '{}' ({num_vars} variables, {} clauses)",
+        output.as_ref().display(),
         clauses.len()
     );
     Ok(())
 }
-
-// pub fn find_all_solutions(clauses: &[Vec<isize>]) -> Result<Vec<Vec<Lit>>> {
-//     let mut solver = Solver::new();
-//     for clause in clauses {
-//         solver.add_clause(
-//             &clause
-//                 .iter()
-//                 .map(|&lit| Lit::from_dimacs(lit))
-//                 .collect::<Vec<_>>(),
-//         );
-//     }
-
-//     let mut all_solutions = Vec::new();
-//     while solver.solve()? {
-//         let model = solver
-//             .model()
-//             .expect("Solver returned true but no model found.");
-
-//         // block the exact same solution from being found again
-//         // !(l1 AND l2 ... and lN) = (!l1 OR !l2 OR ... OR !lN)
-//         let blocking_clause: Vec<Lit> = model.iter().map(|&lit| !lit).collect();
-//         solver.add_clause(&blocking_clause);
-
-//         all_solutions.push(model);
-//     }
-
-//     Ok(all_solutions)
-// }
 
 // holds the state needed to keep finding the next solution.
 pub struct SolutionIterator<'a> {

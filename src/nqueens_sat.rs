@@ -78,22 +78,61 @@ pub fn generate_clauses(n: usize) -> Vec<Vec<isize>> {
     }
 
     // --- CONSTRAINT 4: At most one queen per diagonal ---
-    // For each pair of distinct cells (r1, c1) and (r2, c2) on the same diagonal,
-    // add a clause (-x_r1,c1 OR -x_r2,c2).
-    for r1 in 0..n {
-        for c1 in 0..n {
-            // Check squares down and to the right to avoid duplicates.
-            // Main diagonals (r1-c1 = r2-c2)
-            for i in 1..(n - r1).min(n - c1) {
-                let r2 = r1 + i;
-                let c2 = c1 + i;
-                clauses.push(vec![-coords_to_var(r1, c1, n), -coords_to_var(r2, c2, n)]);
+    // // For each pair of distinct cells (r1, c1) and (r2, c2) on the same diagonal,
+    // // add a clause (-x_r1,c1 OR -x_r2,c2).
+    // for r1 in 0..n {
+    //     for c1 in 0..n {
+    //         // Check squares down and to the right to avoid duplicates.
+    //         // Main diagonals (r1-c1 = r2-c2)
+    //         for i in 1..(n - r1).min(n - c1) {
+    //             let r2 = r1 + i;
+    //             let c2 = c1 + i;
+    //             clauses.push(vec![-coords_to_var(r1, c1, n), -coords_to_var(r2, c2, n)]);
+    //         }
+    //         // Anti-diagonals (r1 + c1 = r2 + c2)
+    //         for i in 1..=(n - r1 - 1).min(c1) {
+    //             let r2 = r1 + i;
+    //             let c2 = c1 - i;
+    //             clauses.push(vec![-coords_to_var(r1, c1, n), -coords_to_var(r2, c2, n)]);
+    //         }
+    //     }
+    // }
+    // --- CONSTRAINT 4: At most one queen per diagonal ---
+
+    // Main diagonals (where row - col is constant)
+    // The constant ranges from -(n-1) to (n-1)
+    for k in -(n as isize - 1)..(n as isize) {
+        let mut cells_on_diagonal = Vec::new();
+        for r in 0..n {
+            for c in 0..n {
+                if (r as isize) - (c as isize) == k {
+                    cells_on_diagonal.push(coords_to_var(r, c, n));
+                }
             }
-            // Anti-diagonals (r1 + c1 = r2 + c2)
-            for i in 1..=(n - r1 - 1).min(c1) {
-                let r2 = r1 + i;
-                let c2 = c1 - i;
-                clauses.push(vec![-coords_to_var(r1, c1, n), -coords_to_var(r2, c2, n)]);
+        }
+        // Add "at most one" clauses for this diagonal
+        for i in 0..cells_on_diagonal.len() {
+            for j in (i + 1)..cells_on_diagonal.len() {
+                clauses.push(vec![-cells_on_diagonal[i], -cells_on_diagonal[j]]);
+            }
+        }
+    }
+
+    // Anti-diagonals (where row + col is constant)
+    // The constant ranges from 0 to 2*(n-1)
+    for k in 0..(2 * n - 1) {
+        let mut cells_on_diagonal = Vec::new();
+        for r in 0..n {
+            for c in 0..n {
+                if r + c == k {
+                    cells_on_diagonal.push(coords_to_var(r, c, n));
+                }
+            }
+        }
+        // Add "at most one" clauses for this diagonal
+        for i in 0..cells_on_diagonal.len() {
+            for j in (i + 1)..cells_on_diagonal.len() {
+                clauses.push(vec![-cells_on_diagonal[i], -cells_on_diagonal[j]]);
             }
         }
     }

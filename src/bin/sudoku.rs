@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
-use sat_puzzles::sudoku::{PUZZLE_EASY, PUZZLE_HARD, PUZZLE_HARDER};
-use sat_puzzles::sudoku::{SudokuGrid, decode_solution, generate_clauses};
+use sat_puzzles::sudoku_sat::{PUZZLE_EASY, PUZZLE_HARD, PUZZLE_HARDER};
+use sat_puzzles::sudoku_sat::{SudokuGrid, decode_solution, generate_clauses};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

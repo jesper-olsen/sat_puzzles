@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use sat_puzzles::mapcolouring::{Colouring, decode_solution, generate_clauses, load_map_from_file};
+use sat_puzzles::mapcolouring_sat::{
+    Colouring, decode_solution, generate_clauses, load_map_from_file,
+};
 use std::path::PathBuf;
 
 #[derive(Parser)]

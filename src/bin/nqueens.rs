@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use sat_puzzles::nqueens::{Queens, decode_solution, generate_clauses};
+use sat_puzzles::nqueens_sat::{Queens, decode_solution, generate_clauses};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
