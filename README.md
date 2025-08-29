@@ -278,7 +278,7 @@ WA: R
 
 ### Minesweeper
 
-First you will need a text file that specifies a problem, such as this 9x9 text file:
+First you will need a file that specifies a minesweeper setup, such as this text file for a 9x9 grid with 9 mines:
 
 ``` text
 ..*......
@@ -293,7 +293,7 @@ First you will need a text file that specifies a problem, such as this 9x9 text 
 ```
 
 Then you have to decide which cell to reveal first, such as 0, 0 - the top left corner.
-Then you can run the solver - and optionally specify a .cnf file to save the problem in conjunctive normal form:
+When you run the solver, you can optionally specify a (.cnf file)[https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html] to save the problem to:
 
 ``` bash
 cargo run --release --bin minesweeper -- --map-file Minesweeper/grid9x9.txt --cnf-file minesweeper.cnf --reveal 0 0

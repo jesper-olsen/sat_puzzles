@@ -119,7 +119,7 @@ fn main() -> Result<()> {
         0
     };
     println!(
-        "Found {n_sat_solutions} SAT solutions + avg {remaining_mines_avg:.2} mines in sea of unknowns (size {sea_set_size}) for ~{total_weight:.3e} combinations",
+        "Found {n_sat_solutions} SAT solutions + avg {remaining_mines_avg:.2} mines in the sea of unknowns (size {sea_set_size}) for ~{total_weight:.3e} combinations",
         total_weight = total_weight as usize,
         sea_set_size = sea_set.len()
     );
