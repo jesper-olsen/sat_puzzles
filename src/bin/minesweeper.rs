@@ -55,6 +55,9 @@ fn calculate_mine_probs(game: &Game) -> Vec<f64> {
         .collect();
 
     let (clauses, var_map) = generate_clauses(&unknown_indices, &local_constraints);
+    game.display_all();
+    println!("{game}");
+    sat_puzzles::write_clauses("minesweeper.cnf", &clauses);
     let sat_iterator = find_all_solutions(&clauses).unwrap();
 
     let n_cells = game.width * game.height;
@@ -92,8 +95,9 @@ fn benchmark_solver(
     let (width, height, num_mines) = difficulty.dimensions();
     (0..num_games)
         .into_iter()
-        .into_par_iter()
-        .map(|_| {
+        //.into_par_iter()
+        .enumerate()
+        .map(|(game_number, _)| {
             let mut rng = rand::rng();
             let mut game = Game::new(width, height, num_mines, first_click_policy);
 
@@ -103,6 +107,7 @@ fn benchmark_solver(
             game.reveal(first_x, first_y);
 
             while game.state == GameState::Playing {
+                println!("Game {game_number}");
                 let probs = calculate_mine_probs(&game);
 
                 // Find lowest probability among covered cells
@@ -143,18 +148,18 @@ fn benchmark_solver(
         .sum()
 }
 
-// fn main_bench() {
-//     let num_games = 100;
-//     let win_rate = benchmark_solver(
-//         num_games,
-//         Difficulty::Beginner,
-//         FirstClickPolicy::GuaranteedSafe,
-//         Some((0, 0)),
-//     );
-//     println!("Win rate {win_rate} / {num_games}");
-// }
+fn main_bench() {
+    let num_games = 1000;
+    let win_rate = benchmark_solver(
+        num_games,
+        Difficulty::Beginner,
+        FirstClickPolicy::GuaranteedSafe,
+        Some((0, 0)),
+    );
+    println!("Win rate {win_rate} / {num_games}");
+}
 
-fn main() -> Result<()> {
+fn main_cli() -> Result<()> {
     let cli = Cli::parse();
 
     let (col, row) = (cli.reveal[0], cli.reveal[1]);
@@ -176,7 +181,7 @@ fn main() -> Result<()> {
     game.reveal(col, row);
 
     println!("Ground truth - revealed board:\n");
-    game.display(true); // show all
+    game.display_all();
     println!("Current game state:\n{game}");
 
     // STEP 1: Generate the clauses and the variable map.
@@ -238,4 +243,10 @@ fn main() -> Result<()> {
 
     display_probs(&game, &probs);
     Ok(())
+}
+
+fn main() -> Result<()> {
+    //main_bench();
+    //Ok(())
+    main_cli()
 }
