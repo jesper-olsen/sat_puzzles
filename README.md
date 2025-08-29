@@ -7,11 +7,13 @@ The core solver logic uses the [Varisat](https://github.com/jix/varisat) library
 
 ## Supported Puzzles
 
-* N-Queens: Place N queens on an N×N chessboard so that no two queens threaten each other.
+* [N-Queens](#n-queens): Place N queens on an N×N chessboard so that no two queens threaten each other.
 
-* Sudoku: Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
+* [Sudoku](#sudoku): Fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids contain all of the digits from 1 to 9.
 
-* Map Colouring: Assign colours to regions on a map so that neighbouring regions have different colours.
+* [Map Colouring](#map-coloring): Assign colours to regions on a map so that neighbouring regions have different colours.
+
+* [Minesweeper](#minesweeper): Estimate mine probabilities for a partially revealed map.
 
 ## Features
 
@@ -272,6 +274,70 @@ V: R
 WA: R
 
 ...
+```
+
+### Minesweeper
+
+First you will need a text file that specifies a problem, such as this 9x9 text file:
+
+``` text
+..*......
+.........
+..*...*..
+....*....
+.*.......
+......*..
+..*......
+.......*.
+..*......
+```
+
+Then you have to decide which cell to reveal first, such as 0, 0 - the top left corner.
+Then you can run the solver - and optionally specify a .cnf file to save the problem in conjunctive normal form:
+
+``` bash
+cargo run --release --bin minesweeper -- --map-file Minesweeper/grid9x9.txt --cnf-file minesweeper.cnf --reveal 0 0
+```
+
+Output:
+``` text
+Ground truth - revealed board:
+
+. 1 * 1 . . . . .
+. 2 2 2 . 1 1 1 .
+. 1 * 2 1 2 * 1 .
+1 2 2 2 * 2 1 1 .
+1 * 1 1 1 2 1 1 .
+1 2 2 1 . 1 * 1 .
+. 1 * 1 . 1 2 2 1
+. 2 2 2 . . 1 * 1
+. 1 * 1 . . 1 1 1
+
+Current game state:
+. 1 # # # # # # #
+. 2 # # # # # # #
+. 1 # # # # # # #
+1 2 # # # # # # #
+# # # # # # # # #
+# # # # # # # # #
+# # # # # # # # #
+# # # # # # # # #
+# # # # # # # # #
+
+Successfully wrote problem to 'minesweeper.cnf' (7 variables, 27 clauses)
+
+Found 2 SAT solutions + avg 6 mines in sea of unknowns (size 66) for ~1.817e8 combinations
+
+Probability map:
+  -    -  1.00 0.09 0.09 0.09 0.09 0.09 0.09
+  -    -  0.00 0.09 0.09 0.09 0.09 0.09 0.09
+  -    -  1.00 0.09 0.09 0.09 0.09 0.09 0.09
+  -    -  0.00 0.09 0.09 0.09 0.09 0.09 0.09
+0.50 0.50 0.00 0.09 0.09 0.09 0.09 0.09 0.09
+0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09
+0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09
+0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09
+0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09 0.09
 ```
 
 ## How It Works: SAT Encoding
