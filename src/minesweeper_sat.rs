@@ -112,11 +112,12 @@ mod tests {
     use super::*;
     use crate::find_all_solutions;
     use minesweeper_rs::game::Game;
+    use std::collections::HashSet;
 
     #[test]
     fn test_simple_solver() {
         let board_layout = "
-        1..
+        .*.
         ...
         ...
         ";
@@ -124,17 +125,22 @@ mod tests {
         // The real constraints come from revealed numbers and total mines.
         // Let's reveal the '1' to create a constraint on its neighbors.
         game.reveal(0, 0);
-        // We must also set the total number of mines for the global constraint.
         game.num_mines = 1;
 
-        // This is the correct, two-step pattern:
-        // 1. Generate clauses and own them.
-        let (clauses, var_map) = generate_clauses(&game);
+        let (global_constraint, local_constraints, sea_of_unknown) = game.get_constraints();
+        let sea_set: HashSet<_> = sea_of_unknown.into_iter().collect();
 
-        // 2. Pass a reference to the clauses into the solver.
+        let unknown_indices: Vec<usize> = global_constraint
+            .cells
+            .into_iter()
+            .filter(|index| !sea_set.contains(index))
+            .collect();
+
+        let (clauses, var_map) = generate_clauses(&unknown_indices, &local_constraints);
+
         let raw_solutions_iterator = find_all_solutions(&clauses).unwrap();
 
-        // 3. Map the raw solutions to our domain-specific solution type.
+        // Map the raw solutions to our domain-specific solution type.
         let solutions: Vec<MinefieldSolution> = raw_solutions_iterator
             .map(|model| decode_solution(&model, game.width, game.height, &var_map))
             .collect();

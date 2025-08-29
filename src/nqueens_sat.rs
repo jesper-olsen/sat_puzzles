@@ -153,7 +153,7 @@ pub fn decode_solution(model: &[Lit], n: usize) -> Queens {
 
 #[cfg(test)]
 mod tests {
-    use crate::nqueens::{Queens, decode_solution, generate_clauses};
+    use crate::nqueens_sat::{Queens, decode_solution, generate_clauses};
 
     #[test]
     fn test_find_all() {
