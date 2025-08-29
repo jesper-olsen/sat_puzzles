@@ -1,6 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
-use minesweeper_rs::game::{CellState, Game};
+use minesweeper_rs::game::{CellState, Game, GameState, display_probs};
+use minesweeper_rs::{Difficulty, FirstClickPolicy};
+use rand::Rng;
+use rand::prelude::IndexedRandom;
+use rayon::prelude::*;
 use sat_puzzles::find_all_solutions;
 use sat_puzzles::minesweeper_sat::{decode_solution, generate_clauses};
 use std::collections::HashSet;
@@ -14,11 +18,11 @@ use std::path::PathBuf;
 )]
 struct Cli {
     /// Path to the map definition file ('*' for mines, '.' for empty).
-    #[arg(short, long)]
+    #[arg(value_name = "MAP_FILE")]
     map_file: PathBuf,
 
     /// Reveal coordinates for the first click, e.g., `-r 0 0`.
-    #[arg(short, long, num_args = 2, value_names = ["COL", "ROW"], default_value = "0 0")]
+    #[arg(short, long, num_args = 2, value_names = ["COL", "ROW"], default_values_t = [0, 0])]
     reveal: Vec<usize>,
 
     /// Optional: Output filename for the generated local CNF clauses.
@@ -40,14 +44,124 @@ fn combinations(n: u128, k: u128) -> u128 {
     (k + 1..=n).fold(1, |acc, val| acc * val / (val - k))
 }
 
+fn calculate_mine_probs(game: &Game) -> Vec<f64> {
+    let (global_constraint, local_constraints, sea_of_unknown) = game.get_constraints();
+    let sea_set: HashSet<_> = sea_of_unknown.into_iter().collect();
+
+    let unknown_indices: Vec<usize> = global_constraint
+        .cells
+        .into_iter()
+        .filter(|index| !sea_set.contains(index))
+        .collect();
+
+    let (clauses, var_map) = generate_clauses(&unknown_indices, &local_constraints);
+    let sat_iterator = find_all_solutions(&clauses).unwrap();
+
+    let n_cells = game.width * game.height;
+    let mut total_weight = 0.0;
+    let mut probs = vec![0.0; n_cells];
+    for model in sat_iterator {
+        let solution = decode_solution(&model, game.width, game.height, &var_map);
+        let local_mines = solution.mines.iter().filter(|&&b| b).count();
+        let remaining_mines = global_constraint.count - local_mines as f64;
+        let weight = combinations(sea_set.len() as u128, remaining_mines as u128) as f64;
+        total_weight += weight;
+
+        let prob_contribution = weight;
+        for (i, &is_mine) in solution.mines.iter().enumerate() {
+            if is_mine {
+                probs[i] += prob_contribution;
+            }
+        }
+        let sea_prob = remaining_mines / sea_set.len() as f64;
+        for &idx in &sea_set {
+            probs[idx] += sea_prob * prob_contribution;
+        }
+    }
+    probs.iter_mut().for_each(|p| *p /= total_weight);
+    probs
+}
+
+/// calculate win rate over given number of games
+fn benchmark_solver(
+    num_games: usize,
+    difficulty: Difficulty,
+    first_click_policy: FirstClickPolicy,
+    first_click: Option<(usize, usize)>,
+) -> usize {
+    let (width, height, num_mines) = difficulty.dimensions();
+    (0..num_games)
+        .into_iter()
+        .into_par_iter()
+        .map(|_| {
+            let mut rng = rand::rng();
+            let mut game = Game::new(width, height, num_mines, first_click_policy);
+
+            // Use provided coordinate or generate random one
+            let (first_x, first_y) = first_click
+                .unwrap_or_else(|| (rng.random_range(0..width), rng.random_range(0..height)));
+            game.reveal(first_x, first_y);
+
+            while game.state == GameState::Playing {
+                let probs = calculate_mine_probs(&game);
+
+                // Find lowest probability among covered cells
+                let mut min_prob = f64::INFINITY;
+                for y in 0..height {
+                    for x in 0..width {
+                        if game.get_cell(x, y).state == CellState::Covered {
+                            let prob = probs[y * width + x];
+                            if prob < min_prob {
+                                min_prob = prob;
+                            }
+                        }
+                    }
+                }
+
+                // Collect all cells with that min probability
+                let mut candidates = Vec::new();
+                for y in 0..height {
+                    for x in 0..width {
+                        if game.get_cell(x, y).state == CellState::Covered {
+                            if (probs[y * width + x] - min_prob).abs() < 1e-12 {
+                                candidates.push((x, y));
+                            }
+                        }
+                    }
+                }
+
+                // Pick a random candidate
+                if candidates.is_empty() {
+                    break;
+                }
+                let &(xx, yy) = candidates.choose(&mut rng).unwrap();
+                game.reveal(xx, yy);
+            }
+
+            (game.state == GameState::Won) as usize
+        })
+        .sum()
+}
+
+// fn main_bench() {
+//     let num_games = 100;
+//     let win_rate = benchmark_solver(
+//         num_games,
+//         Difficulty::Beginner,
+//         FirstClickPolicy::GuaranteedSafe,
+//         Some((0, 0)),
+//     );
+//     println!("Win rate {win_rate} / {num_games}");
+// }
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    let (col, row) = (cli.reveal[0], cli.reveal[1]);
 
     if cli.reveal.len() != 2 {
         anyhow::bail!("Reveal argument must have exactly two values: a row and a column.");
     }
-
-    let (col, row) = (cli.reveal[0], cli.reveal[1]);
 
     let mut game = Game::from_file(&cli.map_file)?;
     if row >= game.height || col >= game.width {
@@ -66,7 +180,6 @@ fn main() -> Result<()> {
     println!("Current game state:\n{game}");
 
     // STEP 1: Generate the clauses and the variable map.
-    // `clauses` and `var_map` are now owned by the `main` function.
     let (global_constraint, local_constraints, sea_of_unknown) = game.get_constraints();
     let sea_set: HashSet<_> = sea_of_unknown.into_iter().collect();
 
@@ -83,7 +196,6 @@ fn main() -> Result<()> {
     }
 
     // STEP 2: Create the SAT solution iterator.
-    // We pass a reference `&clauses`, which is valid for the whole scope.
     let sat_iterator = find_all_solutions(&clauses)?;
 
     let n_cells = game.width * game.height;
@@ -124,17 +236,6 @@ fn main() -> Result<()> {
         sea_set_size = sea_set.len()
     );
 
-    println!("\nProbability map:");
-    for row in 0..game.height {
-        for col in 0..game.width {
-            let idx = row * game.width + col;
-            if game.get_cell(col, row).state == CellState::Revealed {
-                print!("  -  "); // Already revealed
-            } else {
-                print!("{:4.2} ", probs[idx]);
-            }
-        }
-        println!();
-    }
+    display_probs(&game, &probs);
     Ok(())
 }

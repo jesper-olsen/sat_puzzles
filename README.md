@@ -296,7 +296,7 @@ Then you have to decide which cell to reveal first, such as 0, 0 - the top left 
 When you run the solver, you can optionally specify a .cnf file to save the problem to:
 
 ``` bash
-cargo run --release --bin minesweeper -- --map-file Minesweeper/grid9x9.txt --cnf-file minesweeper.cnf --reveal 0 0
+cargo run --release --bin minesweeper -- Minesweeper/grid9x9.txt --cnf-file minesweeper.cnf --reveal 0 0
 ```
 
 Output:
