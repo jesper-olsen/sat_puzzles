@@ -1,44 +1,92 @@
+use std::error::Error;
 use std::fmt;
+use std::fs;
+use std::io;
+use std::path::Path;
 use varisat::Lit;
 
 const N: usize = 9; // The dimension of the grid (9x9)
 pub struct SudokuGrid([[u8; N]; N]); // 0 represents an empty cell.
 const BOX_SIZE: usize = 3; // The dimension of a sub-box (3x3)
 
-pub const PUZZLE_EASY: SudokuGrid = SudokuGrid([
-    [0, 0, 3, 0, 2, 0, 6, 0, 0],
-    [9, 0, 0, 3, 0, 5, 0, 0, 1],
-    [0, 0, 1, 8, 0, 6, 4, 0, 0],
-    [0, 0, 8, 1, 0, 2, 9, 0, 0],
-    [7, 0, 0, 0, 0, 0, 0, 0, 8],
-    [0, 0, 6, 7, 0, 8, 2, 0, 0],
-    [0, 0, 2, 6, 0, 9, 5, 0, 0],
-    [8, 0, 0, 2, 0, 3, 0, 0, 9],
-    [0, 0, 5, 0, 1, 0, 3, 0, 0],
-]);
+// Error type for parsing
+#[derive(Debug)]
+pub enum SudokuParseError {
+    IoError(io::Error),
+    InvalidFormat(String),
+}
 
-pub const PUZZLE_HARDER: SudokuGrid = SudokuGrid([
-    [4, 1, 7, 3, 6, 9, 8, 0, 5],
-    [0, 3, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 7, 0, 0, 0, 0, 0],
-    [0, 2, 0, 0, 0, 0, 0, 6, 0],
-    [0, 0, 0, 0, 8, 0, 4, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-    [0, 0, 0, 6, 0, 3, 0, 7, 0],
-    [5, 0, 0, 2, 0, 0, 0, 0, 0],
-    [1, 0, 4, 0, 0, 0, 0, 0, 0],
-]);
-pub const PUZZLE_HARD: SudokuGrid = SudokuGrid([
-    [8, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 3, 6, 0, 0, 0, 0, 0],
-    [0, 7, 0, 0, 9, 0, 2, 0, 0],
-    [0, 5, 0, 0, 0, 7, 0, 0, 0],
-    [0, 0, 0, 0, 4, 5, 7, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 3, 0],
-    [0, 0, 1, 0, 0, 0, 0, 6, 8],
-    [0, 0, 8, 5, 0, 0, 0, 1, 0],
-    [0, 9, 0, 0, 0, 0, 4, 0, 0],
-]);
+impl From<io::Error> for SudokuParseError {
+    fn from(error: io::Error) -> Self {
+        SudokuParseError::IoError(error)
+    }
+}
+
+impl Error for SudokuParseError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            SudokuParseError::IoError(e) => Some(e),
+            SudokuParseError::InvalidFormat(_) => None,
+        }
+    }
+}
+
+impl fmt::Display for SudokuParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SudokuParseError::IoError(e) => write!(f, "IO error: {e}"),
+            SudokuParseError::InvalidFormat(msg) => write!(f, "Invalid format: {msg}"),
+        }
+    }
+}
+
+impl SudokuGrid {
+    /// Parse a Sudoku puzzle from text
+    /// Accepts formats with or without spaces, using 0 or . for empty cells
+    pub fn from_text(text: &str) -> Result<Self, SudokuParseError> {
+        let mut grid = [[0u8; N]; N];
+
+        // Remove all whitespace and collect digits/dots
+        let chars: Vec<char> = text
+            .chars()
+            .filter(|&c| c.is_ascii_digit() || c == '.')
+            .collect();
+
+        let expected_count = N * N;
+        if chars.len() != expected_count {
+            return Err(SudokuParseError::InvalidFormat(format!(
+                "Expected {expected_count} cells, found {}",
+                chars.len()
+            )));
+        }
+
+        for (idx, &ch) in chars.iter().enumerate() {
+            let row = idx / N;
+            let col = idx % N;
+
+            let num = match ch {
+                '.' | '0' => 0,
+                '1'..='9' => ch.to_digit(10).unwrap() as u8,
+                _ => {
+                    return Err(SudokuParseError::InvalidFormat(format!(
+                        "Invalid character '{ch}' at position {}",
+                        idx + 1
+                    )));
+                }
+            };
+
+            grid[row][col] = num;
+        }
+
+        Ok(SudokuGrid(grid))
+    }
+
+    /// Read a Sudoku puzzle from a file
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, SudokuParseError> {
+        let content = fs::read_to_string(path)?;
+        Self::from_text(&content)
+    }
+}
 
 /// Helper to map a 0-indexed (row, col, digit) to a 1-indexed DIMACS variable number.
 /// A variable is true if cell (r, c) contains digit d.
@@ -186,5 +234,25 @@ impl fmt::Display for SudokuGrid {
         }
 
         write!(f, "└───────┴───────┴───────┘")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_from_text_with_dots() {
+        let input = "
+            ..3.2.6..
+            9..3.5..1
+            ..18.64..
+            ..81.29..
+            7.......8
+            ..67.82..
+            ..26.95..
+            8..2.3..9
+            ..5.1.3..";
+        let result = SudokuGrid::from_text(input);
+        assert!(result.is_ok());
     }
 }

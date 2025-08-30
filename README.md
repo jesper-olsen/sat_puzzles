@@ -151,12 +151,12 @@ Choose one of three presets - easy1, harder1, hardest1 - and like for N-Queens s
 
 Solve
 ``` bash
-cargo run --release --bin sudoku -- solve easy1
+cargo run --release --bin sudoku -- solve Sudoku/easy1.txt --all
 ```
 
 Output:
 ``` text
-Attempting to solve puzzle...
+Solving sudoku from "Sudoku/easy1.txt"
 ┌───────┬───────┬───────┐
 │ · · 3 │ · 2 · │ 6 · · │
 │ 9 · · │ 3 · 5 │ · · 1 │
@@ -170,8 +170,9 @@ Attempting to solve puzzle...
 │ 8 · · │ 2 · 3 │ · · 9 │
 │ · · 5 │ · 1 · │ 3 · · │
 └───────┴───────┴───────┘
+Found 1 unique solution(s) for Sudoku "Sudoku/easy1.txt"
 
-Solution found:
+--- Solution 1 ---
 ┌───────┬───────┬───────┐
 │ 4 8 3 │ 9 2 1 │ 6 5 7 │
 │ 9 6 7 │ 3 4 5 │ 8 2 1 │
@@ -185,9 +186,6 @@ Solution found:
 │ 8 1 4 │ 2 5 3 │ 7 6 9 │
 │ 6 9 5 │ 4 1 7 │ 3 8 2 │
 └───────┴───────┴───────┘
-
-Checking how many solutions this puzzle has...
-Found 1 solution(s).
 ```
 ### Map Coloring
 Assign colors to regions on a map based on adjacency data from a file, ensuring no two neighboring regions share the same color. Example map files (australia.txt, france.txt, etc.) are located in the maps/ directory.

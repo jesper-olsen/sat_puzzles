@@ -1,7 +1,7 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
-use sat_puzzles::sudoku_sat::{PUZZLE_EASY, PUZZLE_HARD, PUZZLE_HARDER};
+use clap::{Parser, Subcommand};
 use sat_puzzles::sudoku_sat::{SudokuGrid, decode_solution, generate_clauses};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -11,51 +11,48 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(ValueEnum, Copy, Clone, Debug)]
-enum Puzzle {
-    Easy1,
-    Hard1,
-    Harder1,
-}
-
 #[derive(Subcommand)]
 enum Commands {
     /// Generate a DIMACS CNF file for the Sudoku problem
     Generate {
-        /// The puzzle to solve
-        puzzle: Puzzle,
+        /// Path to the puzzle file
+        #[arg(value_name = "FILE")]
+        puzzle_file: PathBuf,
+        /// Output file name (default: sudoku.cnf)
+        #[arg(short, long, default_value = "sudoku.cnf")]
+        output: PathBuf,
     },
     /// Solve the N-Queens problem and visualize the solution(s)
     Solve {
-        /// The puzzle to solve
-        puzzle: Puzzle,
+        /// Path to the puzzle file
+        #[arg(value_name = "FILE")]
+        puzzle_file: PathBuf,
+
         /// Find all possible solutions instead of just one
         #[arg(short, long)]
         all: bool,
     },
 }
 
-fn puzzle2sudoku(puzzle: Puzzle) -> SudokuGrid {
-    match puzzle {
-        Puzzle::Easy1 => PUZZLE_EASY,
-        Puzzle::Harder1 => PUZZLE_HARDER,
-        Puzzle::Hard1 => PUZZLE_HARD,
-    }
-}
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Generate { puzzle } => {
-            println!("Generating CNF for Sudoku {puzzle:?}...");
-            let grid = puzzle2sudoku(*puzzle);
+        Commands::Generate {
+            puzzle_file,
+            output,
+        } => {
+            println!(
+                "Generating CNF for Sudoku from {}...",
+                puzzle_file.display()
+            );
+            let grid = SudokuGrid::from_file(puzzle_file)?;
             let clauses = generate_clauses(&grid);
-            let output = "sudoku.cnf";
             sat_puzzles::write_clauses(output, &clauses)?;
+            println!("CNF written to {}", output.display());
         }
-        Commands::Solve { puzzle, all } => {
-            let grid = puzzle2sudoku(*puzzle);
-            println!("Solving sudoku for {puzzle:?}");
+        Commands::Solve { puzzle_file, all } => {
+            println!("Solving sudoku from {puzzle_file:?}");
+            let grid = SudokuGrid::from_file(puzzle_file)?;
             println!("{grid}");
             let clauses = generate_clauses(&grid);
 
@@ -73,10 +70,10 @@ fn main() -> Result<()> {
             };
 
             if solutions.is_empty() {
-                println!("No solutions found for {puzzle:?}");
+                println!("No solutions found for {puzzle_file:?}");
             } else if *all {
                 println!(
-                    "Found {} unique solutions for Sudoku {puzzle:?}",
+                    "Found {} unique solution(s) for Sudoku {puzzle_file:?}",
                     solutions.len()
                 );
                 for (i, sol) in solutions.iter().enumerate() {
@@ -84,7 +81,7 @@ fn main() -> Result<()> {
                     println!("{sol}");
                 }
             } else {
-                println!("Found a solution for Sudoku {puzzle:?}");
+                println!("Found a solution for Sudoku {puzzle_file:?}");
                 println!("{}", solutions[0]);
             }
         }
