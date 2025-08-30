@@ -93,6 +93,7 @@ pub fn generate_clauses_combinatorial(
 /// * `next_var` - A mutable reference to the next available SAT variable ID.
 /// * `sat_vars` - The list of input variables for this single constraint.
 /// * `k` - The cardinality value (the `count` for the constraint).
+/// See also: "A comparison of encodings for cardinality constraints in a SAT solver", Ed Wynn, 2018
 fn add_sequential_encoding_clauses(
     clauses: &mut Vec<Vec<isize>>,
     next_var: &mut isize,
