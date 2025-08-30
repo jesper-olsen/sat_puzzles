@@ -57,7 +57,7 @@ fn calculate_mine_probs(game: &Game) -> Vec<f64> {
     let (clauses, var_map) = generate_clauses(&unknown_indices, &local_constraints);
     game.display_all();
     println!("{game}");
-    sat_puzzles::write_clauses("minesweeper.cnf", &clauses);
+    let _ = sat_puzzles::write_clauses("minesweeper.cnf", &clauses);
     let sat_iterator = find_all_solutions(&clauses).unwrap();
 
     let n_cells = game.width * game.height;
@@ -149,7 +149,7 @@ fn benchmark_solver(
 }
 
 fn main_bench() {
-    let num_games = 1000;
+    let num_games = 100;
     let win_rate = benchmark_solver(
         num_games,
         Difficulty::Beginner,
